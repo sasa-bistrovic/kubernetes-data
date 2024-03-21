@@ -1,0 +1,665 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-config
+data:
+  server.properties: |
+    # Kafka Server Configurations
+    #cluster.id=WdEocF7QQKuf4rcWOQXf8Q
+    broker.id=0
+    listeners=PLAINTEXT://:9092
+    advertised.listeners=PLAINTEXT://kafka-service:9092
+    dataDir=/bitnami/kafka/data
+    log.dirs=/bitnami/kafka/logs
+    auto.create.topics.enable=true
+    zookeeper.connect=zookeeper-service:2181
+    num.network.threads=3
+    num.io.threads=8
+    socket.send.buffer.bytes=102400
+    socket.receive.buffer.bytes=102400
+    socket.request.max.bytes=104857600
+    num.partitions=1
+    num.recovery.threads.per.data.dir=1
+    offsets.topic.replication.factor=1
+    transaction.state.log.replication.factor=1
+    transaction.state.log.min.isr=1
+    log.retention.hours=168
+    log.segment.bytes=1073741824
+    log.retention.check.interval.ms=300000
+  zookeeper.properties: |
+    # Zookeeper Server Configurations
+    tickTime=2000
+    dataDir=/bitnami/zookeeper/data
+    dataLogDir=/bitnami/zookeeper/logs
+    clientPort=2181
+    allow.anonymous.login=yes
+    # disable the per-ip limit on the number of connections since this is a non-production config
+    #maxClientCnxns=0
+    # Disable the adminserver by default to avoid port conflicts.
+    # Set the port to something non-conflicting if choosing to enable this
+    #admin.enableServer=false
+    # admin.serverPort=8080
+    # Add any additional Zookeeper configurations here    
+  log4j.properties: |
+    # Set root logger level to INFO and its only appender to kafkaAppender.
+    log4j.rootLogger=INFO, kafkaAppender
+    # kafkaAppender is set to be a ConsoleAppender.
+    log4j.appender.kafkaAppender=org.apache.log4j.ConsoleAppender
+    # kafkaAppender uses PatternLayout.
+    log4j.appender.kafkaAppender.layout=org.apache.log4j.PatternLayout
+    log4j.appender.kafkaAppender.layout.ConversionPattern=[%d] %p %m (%c)%n    
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service
+  labels:
+    app: kafka
+spec:
+  selector:
+    app: kafka
+  ports:
+    - protocol: TCP
+      port: 9092
+      targetPort: 9092
+  type: LoadBalancer
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zookeeper-service
+  labels:
+    app: zookeeper
+spec:
+  selector:
+    app: zookeeper
+  ports:
+    - protocol: TCP
+      port: 2181
+      targetPort: 2181
+  type: LoadBalancer
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+        - name: kafka
+          image: sasabistrovic/docker-data-kafka:1.0
+          env:
+            - name: KAFKA_LISTENERS
+              value: "PLAINTEXT://:9092"
+            - name: KAFKA_ADVERTISED_LISTENERS
+              value: "PLAINTEXT://kafka-service:9092"
+            - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+              value: "PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+            - name: KAFKA_INTER_BROKER_LISTENER_NAME
+              value: "PLAINTEXT"
+            - name: KAFKA_ZOOKEEPER_CONNECT
+              value: "zookeeper-service:2181"
+            - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
+              value: "true"              
+            - name: KAFKA_BROKER_ID
+              value: "0"
+            - name: KAFKA_NUM_NETWORK_THREADS
+              value: "3"
+            - name: KAFKA_NUM_IO_THREADS
+              value: "8"
+            - name: KAFKA_SOCKET_SEND_BUFFER_BYTES
+              value: "102400"
+            - name: KAFKA_SOCKET_RECEIVE_BUFFER_BYTES
+              value: "102400"
+            - name: KAFKA_SOCKET_REQUEST_MAX_BYTES
+              value: "104857600"
+            - name: KAFKA_NUM_PARTITIONS
+              value: "1"
+            - name: KAFKA_NUM_RECOVERY_THREADS_PER_DATA_DIR
+              value: "1"
+            - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+              value: "1"
+            - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+              value: "1"
+            - name: KAFKA_LOG_RETENTION_HOURS
+              value: "168"
+            - name: KAFKA_LOG_SEGMENT_BYTES
+              value: "1073741824"
+            - name: KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS
+              value: "300000"
+            - name: KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS
+              value: "18000"
+            - name: KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS
+              value: "0"
+            - name: log4j.debug
+              value: "true"
+            - name: log4j.defaultInitOverride
+              value: "true"
+            - name: log4j.configuration
+              value: "file:///opt/bitnami/kafka/config/log4j.properties"
+            - name: log4j.ignoreTCL
+              value: "true"
+          ports:
+            - containerPort: 9092
+          volumeMounts:
+            - name: kafka-config
+              mountPath: /opt/bitnami/kafka/config
+              readOnly: false          
+            - name: kafka-data
+              mountPath: /bitnami/kafka/data
+            - name: kafka-logs
+              mountPath: /bitnami/kafka/logs                        
+      volumes:
+        - name: kafka-config
+          configMap:
+            name: kafka-config      
+        - name: kafka-data
+          persistentVolumeClaim:
+            claimName: kafka-data
+        - name: kafka-logs
+          persistentVolumeClaim:
+            claimName: kafka-logs
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zookeeper-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zookeeper
+  template:
+    metadata:
+      labels:
+        app: zookeeper
+    spec:
+      containers:
+        - name: zookeeper
+          image: sasabistrovic/docker-data-zookeeper:1.0
+          env:
+            - name: ZOOKEEPER_CLIENT_PORT    
+              value: "2181"                  
+            - name: ALLOW_ANONYMOUS_LOGIN
+              value: "yes"             
+          ports:
+            - containerPort: 2181              
+          volumeMounts:
+            - name: zookeeper-data
+              mountPath: /bitnami/zookeeper/data
+            - name: zookeeper-logs
+              mountPath: /bitnami/zookeeper/logs            
+      volumes:
+        - name: zookeeper-data
+          persistentVolumeClaim:
+            claimName: zookeeper-data
+        - name: zookeeper-logs
+          persistentVolumeClaim:
+            claimName: zookeeper-logs
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kafka-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: zookeeper-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kafka-logs
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: zookeeper-logs
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi      
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-boot-kafka
+spec:
+  ports:
+    - port: 8080
+  selector:
+    app: spring-boot-kafka
+  type: LoadBalancer
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-boot-kafka-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring-boot-kafka
+  template:
+    metadata:
+      labels:
+        app: spring-boot-kafka
+    spec:
+      containers:
+        - name: spring-boot-kafka
+          image: sasabistrovic/spring-boot-kafka:1.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_KAFKA_URL
+              value: kafka-service:9092
+            - name: SPRING_KAFKA_TOPIC
+              value: item-topic
+
+
+
+
+
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+data:
+  rabbitmq.conf: |
+    default_user = guest
+    default_pass = guest
+    log.file.level = debug
+    log.dir = /var/lib/rabbitmq
+    log.file = rabbit.log
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rabbitmq-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-service
+  labels:
+    app: rabbitmq
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+    - protocol: TCP
+      port: 5672
+      targetPort: 5672
+  type: LoadBalancer  
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+        - name: rabbitmq
+          image: sasabistrovic/docker-data-rabbitmq:1.0
+          ports:
+            - containerPort: 5672
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              value: guest
+            - name: RABBITMQ_DEFAULT_PASS
+              value: guest
+          volumeMounts:
+            - name: rabbitmq-data
+              mountPath: /var/lib/rabbitmq
+            - name: rabbitmq-config
+              mountPath: /etc/rabbitmq/rabbitmq.conf
+              subPath: rabbitmq.conf
+      volumes:
+        - name: rabbitmq-data
+          persistentVolumeClaim:
+            claimName: rabbitmq-pvc
+        - name: rabbitmq-config
+          configMap:
+            name: rabbitmq-config   
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-boot-rabbitmq
+spec:
+  ports:
+    - port: 8081
+  selector:
+    app: spring-boot-rabbitmq
+  type: LoadBalancer
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-boot-rabbitmq-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring-boot-rabbitmq
+  template:
+    metadata:
+      labels:
+        app: spring-boot-rabbitmq
+    spec:
+      containers:
+        - name: spring-boot-rabbitmq
+          image: sasabistrovic/spring-boot-rabbitmq:1.0
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SPRING_RABBITMQ_HOST
+              value: rabbitmq-service
+            - name: SPRING_RABBITMQ_PORT
+              value: "5672"
+            - name: SPRING_RABBITMQ_USERNAME
+              value: guest
+            - name: SPRING_RABBITMQ_PASSWORD
+              value: guest
+
+
+
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elasticsearch-config
+data:
+  elasticsearch.yml: |
+    cluster.name: my-cluster
+    network.host: 0.0.0.0
+    discovery.type: single-node
+    path.data: /usr/share/elasticsearch/data
+    http.port: 9200
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elasticsearch-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-service
+  labels:
+    app: elasticsearch
+spec:
+  selector:
+    app: elasticsearch
+  ports:
+    - protocol: TCP
+      port: 9200
+      targetPort: 9200
+  type: LoadBalancer
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+        - name: elasticsearch
+          image: sasabistrovic/docker-data-elasticsearch:1.0
+          ports:
+            - containerPort: 9200
+          env:
+            - name: discovery.type
+              value: single-node
+            - name: cluster.name
+              value: elasticsearch
+            - name: xpack.security.enabled
+              value: "false"
+          volumeMounts:
+            - name: elasticsearch-data
+              mountPath: /usr/share/elasticsearch/data
+            - name: elasticsearch-config
+              mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+              subPath: elasticsearch.yml
+      volumes:
+        - name: elasticsearch-data
+          persistentVolumeClaim:
+            claimName: elasticsearch-pvc
+        - name: elasticsearch-config
+          configMap:
+            name: elasticsearch-config                   
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-boot-elasticsearch
+spec:
+  ports:
+    - port: 8082
+  selector:
+    app: spring-boot-elasticsearch
+  type: LoadBalancer
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-boot-elasticsearch-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring-boot-elasticsearch
+  template:
+    metadata:
+      labels:
+        app: spring-boot-elasticsearch
+    spec:
+      containers:
+        - name: spring-boot-elasticsearch
+          image: sasabistrovic/spring-boot-elasticsearch:1.0
+          ports:
+            - containerPort: 8082
+          env:
+            - name: SPRING_ELASTICSEARCH_URL
+              value: elasticsearch-service:9200         
+
+
+
+
+
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+data:
+  redis.conf: |
+    bind redis-service
+    port 6379
+    dir /data
+    appendonly yes
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  labels:
+    app: redis
+spec:
+  selector:
+    app: redis
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
+  type: LoadBalancer
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: sasabistrovic/docker-data-redis:1.0
+          ports:
+            - containerPort: 6379
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+            - name: redis-config-volume
+              mountPath: /redis-config
+              readOnly: true
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-data
+        - name: redis-config-volume
+          configMap:
+            name: redis-config            
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-boot-redis
+spec:
+  ports:
+    - port: 8083
+  selector:
+    app: spring-boot-redis
+  type: LoadBalancer
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-boot-redis-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring-boot-redis
+  template:
+    metadata:
+      labels:
+        app: spring-boot-redis
+    spec:
+      containers:
+        - name: spring-boot-redis
+          image: sasabistrovic/spring-boot-redis:1.0
+          ports:
+            - containerPort: 8083
+          env:
+            - name: SPRING_REDIS_HOST
+              value: redis-service
+            - name: SPRING_REDIS_PORT
+              value: "6379"
