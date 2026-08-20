@@ -16,18 +16,18 @@
 <p><b><font face="Arial">4. After running the containers inside kubernetes run the command:</font></b></p>
 
 <p style="margin-top: 0; margin-bottom: 0"><font face="Arial">minikube service spring-boot-kafka --url</font></p>
-<p style="margin-top: 0; margin-bottom: 0"><font face="Arial">http://192.168.59.103:32433</font></p>
+<p style="margin-top: 0; margin-bottom: 0"><font face="Arial">http&#58;//192.168.59.103&#58;32433</font></p>
 
 <p style="margin-top: 0; margin-bottom: 0"><font face="Arial">minikube service spring-boot-rabbitmq --url</font></p>
-<p style="margin-top: 0; margin-bottom: 0"><font face="Arial">http://192.168.59.103:32222</font></p>
+<p style="margin-top: 0; margin-bottom: 0"><font face="Arial">http&#58;//192.168.59.103&#58;32222</font></p>
 
 <p style="margin-top: 0; margin-bottom: 0"><font face="Arial">minikube service spring-boot-elasticsearch --url</font></p>
-<p style="margin-top: 0; margin-bottom: 0"><font face="Arial">http://192.168.59.103:31157</font></p>
+<p style="margin-top: 0; margin-bottom: 0"><font face="Arial">http&#58;//192.168.59.103&#58;31157</font></p>
 
 <p style="margin-top: 0; margin-bottom: 0"><font face="Arial">minikube service spring-boot-redis --url</font></p>
-<p style="margin-top: 0; margin-bottom: 0"><font face="Arial">http://192.168.59.103:30364</font></p>
+<p style="margin-top: 0; margin-bottom: 0"><font face="Arial">http&#58;//192.168.59.103&#58;30364</font></p>
 
-<p><b><font face="Arial">5. Here is picture from react-crud-kafka and spring-boot-kafka URL "http://192.168.59.103:32433":</font></b></p>
+<p><b><font face="Arial">5. Here is picture from react-crud-kafka and spring-boot-kafka URL "http&#58;//192.168.59.103&#58;32433":</font></b></p>
 
 <font face="Arial">
 
@@ -35,7 +35,7 @@
 
 </font>
 
-<p><b><font face="Arial">6. Here is picture from react-crud-rabbitmq and spring-boot-rabbitmq URL "http://192.168.59.103:32222":</font></b></p>
+<p><b><font face="Arial">6. Here is picture from react-crud-rabbitmq and spring-boot-rabbitmq URL "http&#58;//192.168.59.103&#58;32222":</font></b></p>
 
 <font face="Arial">
 
@@ -43,7 +43,7 @@
 
 </font>
 
-<p><b><font face="Arial">7. Here is picture from react-crud-elasticsearch and spring-boot-elasticsearch URL "http://192.168.59.103:31157":</font></b></p>
+<p><b><font face="Arial">7. Here is picture from react-crud-elasticsearch and spring-boot-elasticsearch URL "http&#58;//192.168.59.103&#58;31157":</font></b></p>
 
 <font face="Arial">
 
@@ -51,7 +51,7 @@
 
 </font>
 
-<p><b><font face="Arial">8. Here is picture from react-crud-redis and spring-boot-redis URL "http://192.168.59.103:30364":</font></b></p>
+<p><b><font face="Arial">8. Here is picture from react-crud-redis and spring-boot-redis URL "http&#58;//192.168.59.103&#58;30364":</font></b></p>
 
 <font face="Arial">
 
